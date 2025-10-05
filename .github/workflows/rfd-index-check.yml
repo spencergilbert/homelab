@@ -1,0 +1,37 @@
+name: RFD Index Check
+
+on:
+  pull_request:
+    paths:
+      - 'docs/rfds/**'
+      - 'docs/README.md'
+      - 'scripts/rfd.py'
+      - '.github/workflows/rfd-index-check.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/rfds/**'
+      - 'docs/README.md'
+      - 'scripts/rfd.py'
+      - '.github/workflows/rfd-index-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check-rfd-index:
+    name: Verify RFD index is up-to-date
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check RFD index
+        run: python3 scripts/rfd.py check
