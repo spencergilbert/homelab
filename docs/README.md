@@ -14,11 +14,10 @@ See [architecture.md](architecture.md) for a high-level overview of the homelabâ
 
 RFDs are numbered sequentially and document significant technical or architectural decisions.
 
-<!-- BEGIN RFD INDEX -->
 <!-- This section is automatically managed by scripts/rfd.py - do not edit manually -->
+<!-- BEGIN RFD INDEX -->
 | RFD | Title | Status | Date |
 |-----|-------|---------|------|
-| [0001](rfds/0001-example-decision.md) | Example Decision | Accepted | 2025-10-05 |
 <!-- END RFD INDEX -->
 
 > RFDs follow the Oxide model â€” they're living design documents intended to capture context and reasoning over time.
