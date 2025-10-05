@@ -20,6 +20,9 @@ README_FILE = DOCS_DIR / "README.md"
 INDEX_START_MARKER = "<!-- BEGIN RFD INDEX -->"
 INDEX_END_MARKER = "<!-- END RFD INDEX -->"
 
+# Valid RFD statuses as defined in RFD 0001
+VALID_STATUSES = {"Draft", "Accepted", "Superseded", "Rejected"}
+
 TITLE_RE = re.compile(r"^# RFD (?P<number>\d+): (?P<title>.+)", re.MULTILINE)
 META_RE = re.compile(
     r"<!-- RFD-META\s*"
@@ -126,6 +129,12 @@ def _extract_rfd_metadata(rfd_file: Path) -> dict:
     date = match.group("date")
     author = match.group("author")
 
+    if status not in VALID_STATUSES:
+        raise ValueError(
+            f"❌ Error: Invalid status '{status}' in {rfd_file}\n"
+            f"   Valid statuses: {', '.join(sorted(VALID_STATUSES))}"
+        )
+
     return dict(
         number=number_from_title, title=title, status=status, date=date, author=author
     )
@@ -198,7 +207,7 @@ def update_index(dry_run: bool = False) -> None:
     if dry_run:
         print(f"🔍 [DRY RUN] Would update {README_FILE}")
         print("   New index content:")
-        for line in table_content.split('\n'):
+        for line in table_content.split("\n"):
             print(f"   {line}")
     else:
         _update_file_section(
@@ -225,11 +234,13 @@ def check_index() -> bool:
     end_idx = content.find(INDEX_END_MARKER)
 
     if start_idx == -1 or end_idx == -1:
-        print(f"❌ Error: Could not find index markers in {README_FILE}", file=sys.stderr)
+        print(
+            f"❌ Error: Could not find index markers in {README_FILE}", file=sys.stderr
+        )
         return False
 
     # Extract current index content
-    current_index = content[start_idx + len(INDEX_START_MARKER):end_idx].strip()
+    current_index = content[start_idx + len(INDEX_START_MARKER) : end_idx].strip()
 
     # Generate what the index should be
     expected_index = _generate_index_content()
@@ -243,8 +254,6 @@ def check_index() -> bool:
         return False
 
 
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="RFD (Request for Discussion) management tool"
@@ -253,12 +262,24 @@ def main():
 
     new_parser = subparsers.add_parser("new", help="Create a new RFD in docs/rfds/")
     new_parser.add_argument("title", help="Title of the new RFD")
-    new_parser.add_argument("--dry-run", action="store_true", help="Show what would be created without creating it")
+    new_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be created without creating it",
+    )
 
-    index_parser = subparsers.add_parser("index", help="Update the RFD index in docs/README.md")
-    index_parser.add_argument("--dry-run", action="store_true", help="Show what would be updated without updating it")
+    index_parser = subparsers.add_parser(
+        "index", help="Update the RFD index in docs/README.md"
+    )
+    index_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be updated without updating it",
+    )
 
-    subparsers.add_parser("check", help="Check if docs/README.md RFD index is up-to-date (for CI)")
+    subparsers.add_parser(
+        "check", help="Check if docs/README.md RFD index is up-to-date (for CI)"
+    )
 
     args = parser.parse_args()
 
