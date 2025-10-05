@@ -131,7 +131,27 @@ def _extract_rfd_metadata(rfd_file: Path) -> dict:
     )
 
 
-def create_new_rfd(title: str) -> None:
+def _generate_index_content() -> str:
+    """Generate the index table content from RFD files."""
+    rfd_files = sorted(
+        [f for f in RFDS_DIR.glob("[0-9][0-9][0-9][0-9]-*.md")], key=lambda x: x.name
+    )
+
+    rows = []
+    for rfd_file in rfd_files:
+        metadata = _extract_rfd_metadata(rfd_file)
+        rel_path = f"rfds/{rfd_file.name}"
+        row = f"| [{metadata['number']}]({rel_path}) | {metadata['title']} | {metadata['status']} | {metadata['date']} |"
+        rows.append(row)
+
+    table_header = "| RFD | Title | Status | Date |\n|-----|-------|---------|------|"
+    if rows:
+        return table_header + "\n" + "\n".join(rows)
+    else:
+        return table_header
+
+
+def create_new_rfd(title: str, dry_run: bool = False) -> None:
     number = _next_rfd_number()
     number_str = f"{number:04d}"
     slug = _slugify(title)
@@ -162,37 +182,67 @@ def create_new_rfd(title: str) -> None:
 
     content = _replace_placeholders(template, mapping)
 
-    with open(output_path, "w") as f:
-        f.write(content)
+    if dry_run:
+        print(f"🔍 [DRY RUN] Would create {output_path}")
+        print(f"   Number: {number_str}")
+        print(f"   Slug: {slug}")
+    else:
+        with open(output_path, "w") as f:
+            f.write(content)
+        print(f"✅ Created {output_path}")
 
-    print(f" Created {output_path}")
+
+def update_index(dry_run: bool = False) -> None:
+    table_content = _generate_index_content()
+
+    if dry_run:
+        print(f"🔍 [DRY RUN] Would update {README_FILE}")
+        print("   New index content:")
+        for line in table_content.split('\n'):
+            print(f"   {line}")
+    else:
+        _update_file_section(
+            README_FILE, INDEX_START_MARKER, INDEX_END_MARKER, table_content
+        )
+        print(f"✅ Updated RFD index in {README_FILE}")
 
 
-def update_index() -> None:
-    # Exclude template file from RFD list
-    rfd_files = sorted(
-        [f for f in RFDS_DIR.glob("[0-9][0-9][0-9][0-9]-*.md")], key=lambda x: x.name
-    )
+def check_index() -> bool:
+    """
+    Check if the RFD index is up-to-date without modifying it.
 
-    if not rfd_files:
-        print("�  No RFD files found", file=sys.stderr)
-        return
+    Returns:
+        True if index is current, False otherwise (exits with code 1)
+    """
+    if not README_FILE.exists():
+        print(f"❌ Error: {README_FILE} does not exist", file=sys.stderr)
+        return False
 
-    rows = []
-    for rfd_file in rfd_files:
-        metadata = _extract_rfd_metadata(rfd_file)
-        rel_path = f"rfds/{rfd_file.name}"
-        row = f"| [{metadata['number']}]({rel_path}) | {metadata['title']} | {metadata['status']} | {metadata['date']} |"
-        rows.append(row)
+    with open(README_FILE, "r") as f:
+        content = f.read()
 
-    table_header = "| RFD | Title | Status | Date |\n|-----|-------|---------|------|"
-    table_content = table_header + "\n" + "\n".join(rows)
+    start_idx = content.find(INDEX_START_MARKER)
+    end_idx = content.find(INDEX_END_MARKER)
 
-    _update_file_section(
-        README_FILE, INDEX_START_MARKER, INDEX_END_MARKER, table_content
-    )
+    if start_idx == -1 or end_idx == -1:
+        print(f"❌ Error: Could not find index markers in {README_FILE}", file=sys.stderr)
+        return False
 
-    print(f" Updated RFD index in {README_FILE}")
+    # Extract current index content
+    current_index = content[start_idx + len(INDEX_START_MARKER):end_idx].strip()
+
+    # Generate what the index should be
+    expected_index = _generate_index_content()
+
+    if current_index == expected_index:
+        print("✅ RFD index is up-to-date")
+        return True
+    else:
+        print("❌ RFD index is out of date", file=sys.stderr)
+        print("   Run './scripts/rfd.py index' to update it", file=sys.stderr)
+        return False
+
+
 
 
 def main():
@@ -201,17 +251,25 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    new_parser = subparsers.add_parser("new", help="Create a new RFD")
+    new_parser = subparsers.add_parser("new", help="Create a new RFD in docs/rfds/")
     new_parser.add_argument("title", help="Title of the new RFD")
+    new_parser.add_argument("--dry-run", action="store_true", help="Show what would be created without creating it")
 
-    subparsers.add_parser("index", help="Update the RFD index in README.md")
+    index_parser = subparsers.add_parser("index", help="Update the RFD index in docs/README.md")
+    index_parser.add_argument("--dry-run", action="store_true", help="Show what would be updated without updating it")
+
+    subparsers.add_parser("check", help="Check if docs/README.md RFD index is up-to-date (for CI)")
 
     args = parser.parse_args()
 
     if args.command == "new":
-        create_new_rfd(args.title)
+        create_new_rfd(args.title, dry_run=args.dry_run)
     elif args.command == "index":
-        update_index()
+        update_index(dry_run=args.dry_run)
+    elif args.command == "check":
+        # Exit with code 1 if index is out of date
+        if not check_index():
+            sys.exit(1)
     else:
         parser.print_help()
         sys.exit(1)
