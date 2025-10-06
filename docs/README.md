@@ -19,6 +19,7 @@ RFDs are numbered sequentially and document significant technical or architectur
 | RFD | Title | Status | Date |
 |-----|-------|---------|------|
 | [0001](rfds/0001-homelab-architecture-decision-process.md) | Homelab Architecture Decision Process | Accepted | 2025-10-05 |
+| [0002](rfds/0002-initial-platform-hardware-orchestration-and-network-strategy.md) | Initial Platform: Hardware, Orchestration, and Network Strategy | Draft | 2025-10-05 |
 <!-- END RFD INDEX -->
 
 > RFDs follow the Oxide model — they're living design documents intended to capture context and reasoning over time.
